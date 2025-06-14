@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Click-Earner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        #game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        #points-display {
+            font-size: 3rem;
+            margin: 20px 0;
+            color: #2c3e50;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        #cps-display {
+            font-size: 1.5rem;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        #click-area {
+            height: 200px;
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            margin-bottom: 30px;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        #click-area:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0,0,0,0.25);
+        }
+        #click-area:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .coin {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle at 30% 30%, #FFD700, #FFA500);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: coinJump 1s ease-out forwards;
+            box-shadow: 0 0 10px rgba(255,215,0,0.7);
+            z-index: 10;
+        }
+        @keyframes coinJump {
+            0% { 
+                transform: translateY(0) scale(0.8); 
+                opacity: 1;
+            }
+            50% { 
+                transform: translateY(-100px) scale(1.2); 
+                opacity: 1;
+            }
+            100% { 
+                transform: translateY(-200px) scale(0.5); 
+                opacity: 0;
+            }
+        }
+        #upgrades-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .upgrade {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-left: 5px solid #3498db;
+        }
+        .upgrade.unlocked {
+            background-color: #e3f2fd;
+            border-left-color: #2196f3;
+        }
+        .upgrade.locked {
+            display: none;
+        }
+        .upgrade-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .upgrade-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .upgrade-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .upgrade-btn:disabled {
+            background: #b0bec5;
+            cursor: not-allowed;
+        }
+        .upgrade-info {
+            text-align: left;
+            flex-grow: 1;
+        }
+        .upgrade-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .upgrade-stats {
+            font-size: 0.9rem;
+            color: #546e7a;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin: 10px 0;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db 0%, #2c3e50 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Click-Earner</h1>
+        <div id="points-display">$0</div>
+        <div id="cps-display">0 clicks per second</div>
+        
+        <div id="click-area">
+            Click!!
+        </div>
+        
+        <h2>Upgrades</h2>
+        <div id="upgrades-container">
+            <!-- Upgrades will be added here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let points = 0;
+        let cps = 0;
+        let clickers = [];
+        
+        // Clicker definitions
+        const clickerTypes = [
+            { name: "Sloth Clicker", unlockAt: 50, cps: 1, cost: 50, owned: 0, unlocked: false, shown: false },
+            { name: "Turtle Clicker", unlockAt: 100, cps: 2, cost: 100, owned: 0, unlocked: false, shown: false },
+            { name: "Rabbit Clicker", unlockAt: 250, cps: 4, cost: 250, owned: 0, unlocked: false, shown: false },
+            { name: "Fox Clicker", unlockAt: 500, cps: 8, cost: 500, owned: 0, unlocked: false, shown: false },
+            { name: "Cheetah Clicker", unlockAt: 1000, cps: 16, cost: 1000, owned: 0, unlocked: false, shown: false },
+            { name: "Falcon Clicker", unlockAt: 2500, cps: 32, cost: 2500, owned: 0, unlocked: false, shown: false },
+            { name: "Jet Clicker", unlockAt: 5000, cps: 64, cost: 5000, owned: 0, unlocked: false, shown: false },
+            { name: "Laser Clicker", unlockAt: 10000, cps: 128, cost: 10000, owned: 0, unlocked: false, shown: false },
+            { name: "Quantum Clicker", unlockAt: 25000, cps: 256, cost: 25000, owned: 0, unlocked: false, shown: false },
+            { name: "Time Clicker", unlockAt: 50000, cps: 512, cost: 50000, owned: 0, unlocked: false, shown: false },
+            { name: "Light Clicker", unlockAt: 100000, cps: 1024, cost: 100000, owned: 0, unlocked: false, shown: false },
+            { name: "God Clicker", unlockAt: 250000, cps: 2048, cost: 250000, owned: 0, unlocked: false, shown: false }
+        ];
+        
+        // DOM elements
+        const pointsDisplay = document.getElementById('points-display');
+        const cpsDisplay = document.getElementById('cps-display');
+        const clickArea = document.getElementById('click-area');
+        const upgradesContainer = document.getElementById('upgrades-container');
+        
+        // Initialize upgrades in the UI
+        function initUpgrades() {
+            upgradesContainer.innerHTML = '';
+            clickerTypes.forEach((clicker, index) => {
+                const upgradeDiv = document.createElement('div');
+                upgradeDiv.className = 'upgrade locked';
+                upgradeDiv.id = `upgrade-${index}`;
+                
+                upgradeDiv.innerHTML = `
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">${clicker.name}</div>
+                        <div class="upgrade-stats">${clicker.cps} clicks/sec • Cost: $${clicker.cost}</div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="progress-${index}"></div>
+                        </div>
+                    </div>
+                    <button class="upgrade-btn" onclick="buyClicker(${index})" disabled>Buy</button>
+                `;
+                
+                upgradesContainer.appendChild(upgradeDiv);
+                updateUpgradeVisibility(index);
+            });
+        }
+        
+        // Update upgrade visibility
+        function updateUpgradeVisibility(index) {
+            const clicker = clickerTypes[index];
+            const upgradeDiv = document.getElementById(`upgrade-${index}`);
+            
+            if (index === 0) {
+                // Always show first clicker
+                clicker.shown = true;
+                upgradeDiv.classList.remove('locked');
+                upgradeDiv.classList.add('unlocked');
+            } else if (clickerTypes[index - 1].owned > 0) {
+                // Show if previous clicker was purchased
+                clicker.shown = true;
+                upgradeDiv.classList.remove('locked');
+                upgradeDiv.classList.add('unlocked');
+            } else {
+                // Hide if previous clicker not purchased
+                clicker.shown = false;
+                upgradeDiv.classList.add('locked');
+            }
+            
+            // Update progress bar
+            const progressBar = document.getElementById(`progress-${index}`);
+            if (points < clicker.unlockAt) {
+                const progress = (points / clicker.unlockAt) * 100;
+                progressBar.style.width = `${progress}%`;
+            } else {
+                progressBar.style.width = '100%';
+            }
+        }
+        
+        // Update the UI
+        function updateUI() {
+            pointsDisplay.textContent = `$${Math.floor(points)}`;
+            cpsDisplay.textContent = `${cps.toFixed(1)} clicks per second`;
+            
+            // Check for unlocked clickers
+            clickerTypes.forEach((clicker, index) => {
+                const upgradeDiv = document.getElementById(`upgrade-${index}`);
+                const btn = upgradeDiv.querySelector('.upgrade-btn');
+                
+                if (clicker.shown) {
+                    if (points >= clicker.unlockAt && !clicker.unlocked) {
+                        clicker.unlocked = true;
+                        upgradeDiv.classList.remove('locked');
+                        upgradeDiv.classList.add('unlocked');
+                    }
+                    
+                    if (clicker.unlocked) {
+                        btn.textContent = `Buy ($${clicker.cost})`;
+                        btn.disabled = points < clicker.cost;
+                    }
+                }
+                
+                updateUpgradeVisibility(index);
+            });
+        }
+        
+        // Create coin jump effect
+        function createCoinJump(x, y) {
+            const coin = document.createElement('div');
+            coin.className = 'coin';
+            coin.style.left = `${x - 15}px`;
+            coin.style.top = `${y - 15}px`;
+            
+            // Add to click area
+            clickArea.appendChild(coin);
+            
+            // Remove after animation
+            setTimeout(() => {
+                coin.remove();
+            }, 1000);
+        }
+        
+        // Manual click handler
+        clickArea.addEventListener('click', (e) => {
+            points += 1;
+            
+            // Get click position relative to click area
+            const rect = clickArea.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Create coin jump effect
+            createCoinJump(x, y);
+            
+            updateUI();
+        });
+        
+        // Buy a clicker
+        function buyClicker(index) {
+            const clicker = clickerTypes[index];
+            
+            if (points >= clicker.cost) {
+                points -= clicker.cost;
+                clicker.owned += 1;
+                cps += clicker.cps;
+                
+                // Start the auto-clicker if it's the first one
+                if (clicker.owned === 1) {
+                    startAutoClicker(index);
+                }
+                
+                // Show next clicker if available
+                if (index < clickerTypes.length - 1) {
+                    updateUpgradeVisibility(index + 1);
+                }
+                
+                updateUI();
+            }
+        }
+        
+        // Start an auto-clicker
+        function startAutoClicker(index) {
+            const clicker = clickerTypes[index];
+            const interval = setInterval(() => {
+                points += clicker.cps * clicker.owned / 10; // Divide by 10 because we run 10x per second
+                updateUI();
+            }, 100); // Run 10 times per second for smoother increments
+            
+            clickers.push(interval);
+        }
+        
+        // Calculate total CPS
+        function calculateCPS() {
+            let total = 0;
+            clickerTypes.forEach(clicker => {
+                total += clicker.cps * clicker.owned;
+            });
+            cps = total;
+            updateUI();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            calculateCPS();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize the game
+        initUpgrades();
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>
